@@ -1,0 +1,39 @@
+# === Python Bytecode and Cache ===
+__pycache__/
+*.py[cod]
+*.so
+
+# === Virtual Environments ===
+venv/
+env/
+
+# === VS Code Configs ===
+.vscode/
+
+# === Logs and System Files ===
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# === Jupyter Notebook Checkpoints ===
+.ipynb_checkpoints/
+
+# === Hugging Face Cache/Downloads ===
+huggingface/
+datasets/
+transformers_cache/
+
+# === Images & Misc ===
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# === Model Files / Checkpoints ===
+*.pt
+*.pth
+*.ckpt
+
+# === Custom Project Files ===
+sample_image.png
