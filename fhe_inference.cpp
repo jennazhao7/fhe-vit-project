@@ -4,8 +4,9 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-
+#include "plaintext_utils.h"
 using namespace lbcrypto;
+using namespace plaintext_utils;
 
 int main() {
     // === 1. Setup CryptoContext ===
@@ -110,6 +111,21 @@ int main() {
             v_weights[i][j] = v_weight_raw[i * in_dim + j];
     std::vector<Plaintext> packed_v_weights = PackWeightsForFHE(v_weights, cc, num_batch);
 
+    // //=== Q projection ===
+    // auto q_weights = LoadWeightMatrixFromBin("weights/q_proj.bin", out_dim, in_dim);
+    // auto packed_q = PackWeightsForFHE(q_weights, cc, num_batch);
+    // Ciphertext<DCRTPoly> ct_q = FHELinearLayer(output_ct, packed_q, bias_pt, cc, keyPair, out_dim, in_dim);
+
+    // // === K projection ===
+    // auto k_weights = LoadWeightMatrixFromBin("weights/k_proj.bin", out_dim, in_dim);
+    // auto packed_k = PackWeightsForFHE(k_weights, cc, num_batch);
+    // Ciphertext<DCRTPoly> ct_k = FHELinearLayer(output_ct, packed_k, bias_pt, cc, keyPair, out_dim, in_dim);
+
+    // // === V projection ===
+    // auto v_weights = LoadWeightMatrixFromBin("weights/v_proj.bin", out_dim, in_dim);
+    // auto packed_v = PackWeightsForFHE(v_weights, cc, num_batch);
+    // Ciphertext<DCRTPoly> ct_v = FHELinearLayer(output_ct, packed_v, bias_pt, cc, keyPair, out_dim, in_dim);
+
     Ciphertext<DCRTPoly> ct_q = FHELinearLayer(output_ct, packed_q_weights, bias_pt, cc, keyPair, out_dim, in_dim);
     Ciphertext<DCRTPoly> ct_k = FHELinearLayer(output_ct, packed_k_weights, bias_pt, cc, keyPair, out_dim, in_dim);
     Ciphertext<DCRTPoly> ct_v = FHELinearLayer(output_ct, packed_v_weights, bias_pt, cc, keyPair, out_dim, in_dim);
@@ -155,11 +171,67 @@ int main() {
     Plaintext result_pt;
     cc->Decrypt(keyPair.secretKey, ct_score, &result_pt);
     auto vals = result_pt->GetRealPackedValue();
+    // === apply softmax function on decrypted vals. 
+    std::vector<double> softmax_vals = Softmax(vals);
 
-    std::cout << "Attention Score (Q*K^T / sqrt(d)) first 10 values: ";
-    for (size_t i = 0; i < 10; ++i)
-        std::cout << vals[i] << " ";
+
+    Plaintext softmax_pt = cc->MakeCKKSPackedPlaintext(softmax_vals);
+    Ciphertext<DCRTPoly> softmax_ct = cc->Encrypt(keyPair.publicKey, softmax_pt);
+
+    Ciphertext<DCRTPoly> attn_output = cc->EvalMult(softmax_ct, ct_v);  // Element-wise
+    attn_output = cc->EvalSum(attn_output, in_dim);  // Sum for weighted combination
+
+    // === Residual Add ===
+    std::cout << "[DEBUG] Applying residual connection..." << std::endl;
+    Ciphertext<DCRTPoly> post_residual = cc->EvalAdd(attn_output, output_ct);
+    // === LayerNorm (plaintext) ===
+    std::cout << "[DEBUG] Decrypting for LayerNorm..." << std::endl;
+    Plaintext norm_input_pt;
+    cc->Decrypt(keyPair.secretKey, post_residual, &norm_input_pt);
+    auto norm_input_vals = norm_input_pt->GetRealPackedValue();
+
+    auto norm_vals = plaintext_utils::LayerNorm(norm_input_vals);
+    Plaintext norm_pt = cc->MakeCKKSPackedPlaintext(norm_vals);
+    Ciphertext<DCRTPoly> norm_ct = cc->Encrypt(keyPair.publicKey, norm_pt);
+
+    // === MLP Dense 1 ===
+    std::cout << "[DEBUG] Running MLP Dense Layer 1..." << std::endl;
+
+    auto mlp1_weights = LoadWeightMatrixFromBin("../weights/mlp_dense1.bin", out_dim, in_dim);
+    auto packed_mlp1 = PackWeightsForFHE(mlp1_weights, cc, num_batch);
+    auto mlp1_out = FHELinearLayer(norm_ct, packed_mlp1, bias_pt, cc, keyPair, out_dim, in_dim);
+
+    // === GELU (plaintext) ===
+    std::cout << "[DEBUG] Decrypting for GELU activation..." << std::endl;
+    Plaintext mlp1_pt;
+    cc->Decrypt(keyPair.secretKey, mlp1_out, &mlp1_pt);
+    auto mlp1_vals = mlp1_pt->GetRealPackedValue();
+    auto gelu_vals = GELU(mlp1_vals);
+ 
+    Plaintext gelu_pt = cc->MakeCKKSPackedPlaintext(gelu_vals);
+    Ciphertext<DCRTPoly> gelu_ct = cc->Encrypt(keyPair.publicKey, gelu_pt);
+
+    // === MLP Dense 2 ===
+    std::cout << "[DEBUG] Running MLP Dense Layer 2..." << std::endl;
+    auto mlp2_weights = LoadWeightMatrixFromBin("../weights/mlp_dense2.bin", out_dim, in_dim);
+    auto packed_mlp2 = PackWeightsForFHE(mlp2_weights, cc, num_batch);
+    auto mlp2_out = FHELinearLayer(gelu_ct, packed_mlp2, bias_pt, cc, keyPair, out_dim, in_dim);
+
+    auto final_weights = LoadWeightMatrixFromBin("../weights/attn_out_proj.bin", out_dim, in_dim);
+    auto packed_final = PackWeightsForFHE(final_weights, cc, num_batch);
+    Ciphertext<DCRTPoly> final_logits_ct = FHELinearLayer(mlp2_out, packed_final, bias_pt, cc, keyPair, out_dim, in_dim);
+
+
+    Plaintext final_logits_pt;
+    cc->Decrypt(keyPair.secretKey, final_logits_ct, &final_logits_pt);
+    auto logits = final_logits_pt->GetRealPackedValue();
+    std::cout << "[DEBUG] Final logits (first 10):\n";
+    for (size_t i = 0; i < 10; ++i) std::cout << logits[i] << " ";
     std::cout << std::endl;
+
+    auto max_it = std::max_element(logits.begin(), logits.end());
+    int predicted_label = std::distance(logits.begin(), max_it);
+    std::cout << "[RESULT]Predicted label: " << predicted_label << std::endl;
 
     return 0;
 }
