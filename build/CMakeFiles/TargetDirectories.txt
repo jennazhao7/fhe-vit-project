@@ -1,3 +1,0 @@
-/home/jzhao7/FHEViT/fhe-vit-project/build/CMakeFiles/run_patch_embed.dir
-/home/jzhao7/FHEViT/fhe-vit-project/build/CMakeFiles/edit_cache.dir
-/home/jzhao7/FHEViT/fhe-vit-project/build/CMakeFiles/rebuild_cache.dir
