@@ -9,7 +9,7 @@ env/
 
 # === VS Code Configs ===
 .vscode/
-
+build/
 # === Logs and System Files ===
 *.log
 *.tmp

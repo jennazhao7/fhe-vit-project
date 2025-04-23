@@ -5,21 +5,16 @@
 #include <stdexcept>
 
 std::vector<std::vector<double>> LoadWeightMatrixFromBin(const std::string& path, size_t out_dim, size_t in_dim) {
+    std::vector<float> raw(out_dim * in_dim);
+    std::ifstream fin(path, std::ios::binary);
+    if (!fin) throw std::runtime_error("Cannot open weight file: " + path);
+    fin.read(reinterpret_cast<char*>(raw.data()), raw.size() * sizeof(float));
+    fin.close();
+
     std::vector<std::vector<double>> weights(out_dim, std::vector<double>(in_dim));
-    FILE* file = fopen(path.c_str(), "rb");
-    if (!file) {
-        throw std::runtime_error("Cannot open weight file: " + path);
-    }
+    for (size_t i = 0; i < out_dim; ++i)
+        for (size_t j = 0; j < in_dim; ++j)
+            weights[i][j] = raw[i * in_dim + j];
 
-    for (size_t i = 0; i < out_dim; ++i) {
-        float buffer[in_dim];
-        fread(buffer, sizeof(float), in_dim, file);
-        for (size_t j = 0; j < in_dim; ++j) {
-            weights[i][j] = static_cast<double>(buffer[j]);
-        }
-    }
-
-    fclose(file);
     return weights;
 }
-
