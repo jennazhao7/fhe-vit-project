@@ -43,13 +43,21 @@ tar -xvzf openfhe-ubuntu-22.04.tar.gz
 mv openfhe-ubuntu-22.04 $HOME/openfhe-install
 
 ## Installing this fhe-vit project
-Clone from git path: git clone https://github.com/jennazhao7/fhe-vit-project.git
-cd fhe-vit-project
+Clone from git path: 
+- git clone https://github.com/jennazhao7/fhe-vit-project.git
+- cd fhe-vit-project
 
-Create and enter build folder: mkdir build && cd build
+Create and enter build folder: 
+- mkdir build && cd build
 
-Run CMake with OpenFHE path: cmake .. -DOpenFHE_DIR=$HOME/openfhe-install/lib/cmake/OpenFHE
-Compile the project: make -j
+Run CMake with OpenFHE path: 
+- cmake .. -DOpenFHE_DIR=$HOME/openfhe-install/lib/cmake/OpenFHE
 
-Once built, run the executable: ./fhe_inference
-Output results to full_inference_output.txt
+Compile the project: 
+- make -j
+
+Once built, run the executable: 
+- ./fhe_inference
+
+Output results to:
+- full_inference_output.txt
