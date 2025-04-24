@@ -10,10 +10,10 @@ echo "🔍 Detected OS: $OS"
 # === 2. Install dependencies ===
 echo "📦 Checking required packages..."
 
-install_linux_dependencies() {
-    sudo apt update
-    sudo apt install -y build-essential cmake python3 python3-venv python3-pip
-}
+# install_linux_dependencies() {
+#     sudo apt update
+#     sudo apt install -y build-essential cmake python3 python3-venv python3-pip
+# }
 
 install_macos_dependencies() {
     if ! command -v brew &> /dev/null; then
@@ -23,14 +23,14 @@ install_macos_dependencies() {
     brew install cmake python
 }
 
-if [[ "$OS" == "Linux" ]]; then
-    install_linux_dependencies
-elif [[ "$OS" == "Darwin" ]]; then
-    install_macos_dependencies
-else
-    echo "❌ Unsupported OS: $OS"
-    exit 1
-fi
+# if [[ "$OS" == "Linux" ]]; then
+#     install_linux_dependencies
+# elif [[ "$OS" == "Darwin" ]]; then
+#     install_macos_dependencies
+# else
+#     echo "❌ Unsupported OS: $OS"
+#     exit 1
+# fi
 
 # === 3. Build OpenFHE ===
 echo "🔧 [1/4] Building OpenFHE..."

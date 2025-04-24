@@ -365,7 +365,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load pretrained model & processor
 model = ViTForImageClassification.from_pretrained(model_name)
-processor = AutoImageProcessor.from_pretrained(model_name)
+processor = AutoImageProcessor.from_pretrained(model_name, use_fast=True)
 model.to(device)
 model.eval()
 
@@ -386,11 +386,12 @@ total = 0
 for sample in tqdm(dataset):
     image = sample["image"]
     label = sample["label"]
-
+    print(f"[PLAINTEXT] Ground Truth label: {label}")
     image_tensor = image_transform(image).unsqueeze(0).to(device)
     with torch.no_grad():
         outputs = model(image_tensor)
         predicted = torch.argmax(outputs.logits, dim=1).item()
+        print(f"[PLAINTEXT] Predicted label: {predicted}")
 
     if predicted == label:
         correct += 1
