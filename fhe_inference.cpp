@@ -8,7 +8,9 @@
 using namespace lbcrypto;
 using namespace plaintext_utils;
 
+
 int main() {
+    std::ofstream fout("full_inference_output.txt");
     // === 1. Setup CryptoContext ===
     CCParams<CryptoContextCKKSRNS> params;
     params.SetSecretKeyDist(SPARSE_TERNARY);
@@ -64,12 +66,21 @@ int main() {
     
     std::vector<Plaintext> patch_embed_weights = PackWeightsForFHE(weights, cc, num_batch);
 
-    // === 4. Create dummy input patch (1 image patch flattened) ===
-    std::vector<double> input_vec(in_dim);
-    for (size_t i = 0; i < in_dim; ++i)
-        input_vec[i] = (double)i / in_dim;  // Dummy normalized values [0,1)
+    // === 4. Load actual input from binary file ===
+    std::vector<float> input_raw(in_dim);
+    std::ifstream fin_in("../input/image_2.bin", std::ios::binary);
+    if (!fin_in) {
+        std::cerr << "[ERROR] Failed to open input/image_2.bin" << std::endl;
+        return 1;
+    }
+    fin_in.read(reinterpret_cast<char*>(input_raw.data()), input_raw.size() * sizeof(float));
+    fin_in.close();
+    // Convert float vector to double for CKKS encoding
+    std::vector<double> input_vec(input_raw.begin(), input_raw.end());
 
-    Ciphertext<DCRTPoly> input_ct = encrypt_plain_vector(input_vec, cc, keyPair.publicKey);
+    // Encrypt using OpenFHE
+    Plaintext input_pt = cc->MakeCKKSPackedPlaintext(input_vec);
+    Ciphertext<DCRTPoly> input_ct = cc->Encrypt(keyPair.publicKey, input_pt);
 
     // === 5. Run patch embedding ===
     Plaintext bias_pt = cc->MakeCKKSPackedPlaintext(std::vector<double>(num_slots, 0.0));
@@ -172,9 +183,15 @@ int main() {
     cc->Decrypt(keyPair.secretKey, ct_score, &result_pt);
     auto vals = result_pt->GetRealPackedValue();
     // === apply softmax function on decrypted vals. 
+    fout << "Attention Score (Q·K / sqrt(d)):\n";
+    for (double val : vals) fout << val << " ";
+    fout << "\n\n";
     std::vector<double> softmax_vals = Softmax(vals);
 
-
+    //log softmax values
+    fout << "Softmax Vector:\n";
+    for (double val : softmax_vals) fout << val << " ";
+    fout << "\n\n";
     Plaintext softmax_pt = cc->MakeCKKSPackedPlaintext(softmax_vals);
     Ciphertext<DCRTPoly> softmax_ct = cc->Encrypt(keyPair.publicKey, softmax_pt);
 
@@ -182,10 +199,10 @@ int main() {
     attn_output = cc->EvalSum(attn_output, in_dim);  // Sum for weighted combination
 
     // === Residual Add ===
-    std::cout << "[DEBUG] Applying residual connection..." << std::endl;
+    //std::cout << "[DEBUG] Applying residual connection..." << std::endl;
     Ciphertext<DCRTPoly> post_residual = cc->EvalAdd(attn_output, output_ct);
     // === LayerNorm (plaintext) ===
-    std::cout << "[DEBUG] Decrypting for LayerNorm..." << std::endl;
+    //std::cout << "[DEBUG] Decrypting for LayerNorm..." << std::endl;
     Plaintext norm_input_pt;
     cc->Decrypt(keyPair.secretKey, post_residual, &norm_input_pt);
     auto norm_input_vals = norm_input_pt->GetRealPackedValue();
@@ -195,24 +212,28 @@ int main() {
     Ciphertext<DCRTPoly> norm_ct = cc->Encrypt(keyPair.publicKey, norm_pt);
 
     // === MLP Dense 1 ===
-    std::cout << "[DEBUG] Running MLP Dense Layer 1..." << std::endl;
+    //std::cout << "[DEBUG] Running MLP Dense Layer 1..." << std::endl;
 
     auto mlp1_weights = LoadWeightMatrixFromBin("../weights/mlp_dense1.bin", out_dim, in_dim);
     auto packed_mlp1 = PackWeightsForFHE(mlp1_weights, cc, num_batch);
     auto mlp1_out = FHELinearLayer(norm_ct, packed_mlp1, bias_pt, cc, keyPair, out_dim, in_dim);
 
     // === GELU (plaintext) ===
-    std::cout << "[DEBUG] Decrypting for GELU activation..." << std::endl;
+    //std::cout << "[DEBUG] Decrypting for GELU activation..." << std::endl;
     Plaintext mlp1_pt;
     cc->Decrypt(keyPair.secretKey, mlp1_out, &mlp1_pt);
     auto mlp1_vals = mlp1_pt->GetRealPackedValue();
     auto gelu_vals = GELU(mlp1_vals);
- 
+    //gelu output 
+    fout << "GELU Output:\n";
+    for (double val : gelu_vals) fout << val << " ";
+    fout << "\n\n";
+
     Plaintext gelu_pt = cc->MakeCKKSPackedPlaintext(gelu_vals);
     Ciphertext<DCRTPoly> gelu_ct = cc->Encrypt(keyPair.publicKey, gelu_pt);
 
     // === MLP Dense 2 ===
-    std::cout << "[DEBUG] Running MLP Dense Layer 2..." << std::endl;
+   // std::cout << "[DEBUG] Running MLP Dense Layer 2..." << std::endl;
     auto mlp2_weights = LoadWeightMatrixFromBin("../weights/mlp_dense2.bin", out_dim, in_dim);
     auto packed_mlp2 = PackWeightsForFHE(mlp2_weights, cc, num_batch);
     auto mlp2_out = FHELinearLayer(gelu_ct, packed_mlp2, bias_pt, cc, keyPair, out_dim, in_dim);
@@ -222,16 +243,22 @@ int main() {
     Ciphertext<DCRTPoly> final_logits_ct = FHELinearLayer(mlp2_out, packed_final, bias_pt, cc, keyPair, out_dim, in_dim);
 
 
+    constexpr size_t num_classes = 10;
     Plaintext final_logits_pt;
     cc->Decrypt(keyPair.secretKey, final_logits_ct, &final_logits_pt);
     auto logits = final_logits_pt->GetRealPackedValue();
-    std::cout << "[DEBUG] Final logits (first 10):\n";
-    for (size_t i = 0; i < 10; ++i) std::cout << logits[i] << " ";
-    std::cout << std::endl;
-
-    auto max_it = std::max_element(logits.begin(), logits.end());
-    int predicted_label = std::distance(logits.begin(), max_it);
-    std::cout << "[RESULT]Predicted label: " << predicted_label << std::endl;
+    //log logits before prediction
+    fout << "Final Class Logits:\n";
+    for (double val : logits) fout << val << " ";
+    fout << "\n\n";
+    // Only consider first 10 slots (one per class)
+    std::vector<double> class_logits(logits.begin(), logits.begin() + num_classes);
+    auto max_it = std::max_element(class_logits.begin(), class_logits.end());
+    int predicted_label = std::distance(class_logits.begin(), max_it);
+    
+    fout << "\n\nPredicted Class: " << predicted_label << "\n";
+    fout.close();
+    // std::cout << "[RESULT]Predicted label: " << predicted_label << std::endl;
 
     return 0;
 }
