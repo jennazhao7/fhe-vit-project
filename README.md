@@ -39,7 +39,7 @@ cd fhe-vit-project
 ```bash 
 cd openfhe-development
 mkdir build && cd build
-cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF
+cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF -DHAVE_STD_REGEX=ON -DRUN_HAVE_STD_REGEX=1
 make -j2
 cd ../../
 ```
