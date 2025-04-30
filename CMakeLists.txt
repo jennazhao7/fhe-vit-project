@@ -44,3 +44,8 @@ add_executable(fhe_inference
     fhe_linear.cpp      # ⬅️ Add this
     weight_loader.cpp   # ⬅️ Also needed if not already added
 )
+add_executable(test_example
+    test_example.cpp
+    fhe_linear.cpp      # ⬅️ Add this
+    weight_loader.cpp   # ⬅️ Also needed if not already added
+)
