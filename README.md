@@ -29,19 +29,32 @@ This project performs inference on a Vision Transformer (ViT) using Fully Homomo
 ## Instructions for Running test_example
 - Clone the repo with submodules
 
-<pre>```bash 
+```bash 
 git clone --recurse-submodules https://github.com/jennazhao7/fhe-vit-project.git 
-cd fhe-vit-project```</pre>
+cd fhe-vit-project
+```
 
 - Build OpenFHE
 
-<pre> ``` bash cd openfhe-development mkdir build && cd build cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF make -j2 cd ../../``` </pre>
+```bash 
+cd openfhe-development
+mkdir build && cd build
+cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF
+make -j2
+cd ../../
+```
 - Build the project
 
-<pre> ``` bash mkdir -p build && cd build cmake .. make -j2 ``` </pre>
+```bash 
+mkdir -p build && cd build
+cmake ..
+make -j2
+```
 - Run the test app
 
-<pre> ``` bash ./test_example ``` </pre>
+```bash 
+./test_example
+```
 
 ---
 ## Installing OpenFHE (No Git Needed)
