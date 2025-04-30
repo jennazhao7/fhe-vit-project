@@ -5,7 +5,7 @@ This project performs inference on a Vision Transformer (ViT) using Fully Homomo
 
 ---
 
-## ✅ Project Overview
+## Project Overview
 
 - **Model**: Vision Transformer
 - **Novelty**: Fully Homomorphic Encryption using OpenFHE
@@ -26,7 +26,20 @@ This project performs inference on a Vision Transformer (ViT) using Fully Homomo
 - OpenFHE (installed from prebuilt release — no git clone required)
 
 ---
+##🚀 Instructions for Running test_example
+- Clone the repo with submodules
 
+<pre> ``` bash git clone --recurse-submodules https://github.com/jennazhao7/fhe-vit-project.git cd fhe-vit-project``` </pre>
+
+- Build OpenFHE
+
+<pre> ``` bash cd openfhe-development mkdir build && cd build cmake .. -DBUILD_EXAMPLES=OFF -DBUILD_DEMOS=OFF -DBUILD_TESTING=OFF make -j2 cd ../../``` </pre>
+- Build the project
+
+<pre> ``` bash mkdir -p build && cd build cmake .. make -j2 ``` </pre>
+- Run the test app
+
+<pre> ``` bash ./test_example ``` </pre>
 ## Installing OpenFHE (No Git Needed)
 
 1. **Download prebuilt OpenFHE:**
