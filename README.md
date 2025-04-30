@@ -29,7 +29,7 @@ This project performs inference on a Vision Transformer (ViT) using Fully Homomo
 ## Instructions for Running test_example
 - Clone the repo with submodules
 
-<pre>``` bash 
+<pre>```bash 
 git clone --recurse-submodules https://github.com/jennazhao7/fhe-vit-project.git 
 cd fhe-vit-project```</pre>
 
