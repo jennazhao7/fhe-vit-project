@@ -29,7 +29,8 @@ int main() {
     cc->Enable(LEVELEDSHE);
     cc->Enable(ADVANCEDSHE);
     auto keyPair = cc->KeyGen();
-    cc->EvalMultKeyGen(keyPair.secretKey);
+    cc->EvalMultKeyGen(keyPair.secretKey);\
+    cc->EvalSumKeyGen(keyPair.secretKey);
     
     const size_t out_dim = 192;
     const size_t in_dim = 192;
@@ -142,9 +143,11 @@ int main() {
     Plaintext decrypted;
     cc->Decrypt(keyPair.secretKey, ct_score, &decrypted);
     auto score_vals = decrypted->GetRealPackedValue();
-    fout << "[FHE] Attention Score:\n";
-    for (auto x : score_vals) fout << x << " ";
+    fout << "FHE] Attention Score: (truncated to first 20):\n";
+    for (size_t i = 0; i < 20 && i < score_vals.size(); ++i)
+        fout << score_vals[i] << " ";
     fout << "\n";
+    
 
     auto softmax_vals = Softmax(score_vals);
     Plaintext softmax_pt = cc->MakeCKKSPackedPlaintext(softmax_vals);
