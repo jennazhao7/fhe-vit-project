@@ -184,14 +184,14 @@ int main(int argc, char* argv[]) {
                 mlp1[i] += mlp1_weights[i][j] * norm[j];
 
         auto gelu_out = GELU(mlp1);
-        fout << "\n[PLAINTEXT INFERENCE WENT PAST MLP1]\n";
+        //fout << "\n[PLAINTEXT INFERENCE WENT PAST MLP1]\n";
         
 
         std::vector<double> mlp2(CLS, 0.0);
         for (size_t i = 0; i < CLS; ++i)
             for (size_t j = 0; j < HIDDEN; ++j)
                 mlp2[i] += mlp2_weights[i][j] * gelu_out[j];
-        fout << "\n[PLAINTEXT INFERENCE WENT PAST MLP2]\n";
+        //fout << "\n[PLAINTEXT INFERENCE WENT PAST MLP2]\n";
 
         std::cout << "[DEBUG] final_weights.size(): " << final_weights.size() << "\n";
         if (!final_weights.empty()) {

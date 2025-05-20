@@ -10,7 +10,9 @@ def main():
 
     # 1. Load Tiny-ImageNet dataset
     print("Loading Tiny-ImageNet...")
-    dataset = load_dataset("zh-plus/tiny-imagenet", split="train[:200]")  # Use first 200 for consistency
+    dataset = load_dataset("zh-plus/tiny-imagenet", split="train")
+    dataset = dataset.shuffle(seed=42)  # Shuffle full dataset
+    dataset = dataset.with_format("python")
 
     # 2. Load processor and model
     model_name = "WinKawaks/vit-tiny-patch16-224"
@@ -38,6 +40,8 @@ def main():
 
         if not isinstance(img, Image.Image):
             img = Image.fromarray(img)
+        if img.mode != "RGB":
+            img = img.convert("RGB")  # 🔁 Ensure it has 3 channels
 
         inputs = processor(images=img, return_tensors="pt").to(device)
 
