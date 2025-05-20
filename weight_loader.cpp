@@ -18,3 +18,10 @@ std::vector<std::vector<double>> LoadWeightMatrixFromBin(const std::string& path
 
     return weights;
 }
+
+std::vector<double> LoadWeightVectorFromBin(const std::string& path, size_t dim) {
+    std::ifstream file(path, std::ios::binary);
+    std::vector<double> vec(dim);
+    file.read(reinterpret_cast<char*>(vec.data()), sizeof(double) * dim);
+    return vec;
+}

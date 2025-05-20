@@ -33,7 +33,7 @@ inline std::vector<double> GELU(const std::vector<double>& x) {
     return result;
 }
 
-inline std::vector<double> LayerNorm(const std::vector<double>& x, double epsilon = 1e-6) {
+/**inline std::vector<double> LayerNorm(const std::vector<double>& x, double epsilon = 1e-6) {
     double mean = std::accumulate(x.begin(), x.end(), 0.0) / x.size();
 
     double sq_sum = 0.0;
@@ -46,6 +46,26 @@ inline std::vector<double> LayerNorm(const std::vector<double>& x, double epsilo
         normed[i] = (x[i] - mean) / (stddev + epsilon);
 
     return normed;
+}**/
+std::vector<double> LayerNorm(
+    const std::vector<double>& x,
+    const std::vector<double>& gamma,
+    const std::vector<double>& beta,
+    double epsilon = 1e-6
+) {
+    size_t dim = x.size();
+    double mean = 0.0, var = 0.0;
+    for (double v : x) mean += v;
+    mean /= dim;
+
+    for (double v : x) var += (v - mean) * (v - mean);
+    var /= dim;
+
+    std::vector<double> out(dim);
+    for (size_t i = 0; i < dim; ++i)
+        out[i] = gamma[i] * ((x[i] - mean) / std::sqrt(var + epsilon)) + beta[i];
+
+    return out;
 }
 
 } // namespace plaintext_utils
