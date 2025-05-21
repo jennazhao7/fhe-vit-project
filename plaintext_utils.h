@@ -33,6 +33,12 @@ inline std::vector<double> GELU(const std::vector<double>& x) {
     return result;
 }
 
+inline void GELU_matrix(std::vector<std::vector<double>>& X) {
+    for (auto& row : X) {
+        row = GELU(row);  // Overwrite with activated vector
+    }
+}
+
 /**inline std::vector<double> LayerNorm(const std::vector<double>& x, double epsilon = 1e-6) {
     double mean = std::accumulate(x.begin(), x.end(), 0.0) / x.size();
 
@@ -47,7 +53,10 @@ inline std::vector<double> GELU(const std::vector<double>& x) {
 
     return normed;
 }**/
-std::vector<double> LayerNorm(
+
+
+
+inline std::vector<double> LayerNormVector(
     const std::vector<double>& x,
     const std::vector<double>& gamma,
     const std::vector<double>& beta,
@@ -66,6 +75,19 @@ std::vector<double> LayerNorm(
         out[i] = gamma[i] * ((x[i] - mean) / std::sqrt(var + epsilon)) + beta[i];
 
     return out;
+}
+
+inline std::vector<std::vector<double>> LayerNorm(
+    const std::vector<std::vector<double>>& X,
+    const std::vector<double>& gamma,
+    const std::vector<double>& beta,
+    double epsilon = 1e-6
+) {
+    std::vector<std::vector<double>> output;
+    for (const auto& row : X) {
+        output.push_back(plaintext_utils::LayerNormVector(row, gamma, beta, epsilon));
+    }
+    return output;
 }
 
 } // namespace plaintext_utils
