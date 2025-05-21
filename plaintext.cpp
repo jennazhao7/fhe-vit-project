@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
         }
 
         // Final layer norm
-        auto normed = LayerNorm(sequence[0], final_ln_weight, final_ln_bias);  // CLS token only
+        auto normed = LayerNormVector(sequence[0], final_ln_weight, final_ln_bias);  // CLS token only
 
         std::vector<double> logits(NUM_CLASSES, 0.0);
         for (size_t i = 0; i < NUM_CLASSES; ++i)
