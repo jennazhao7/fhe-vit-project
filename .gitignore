@@ -36,4 +36,4 @@ transformers_cache/
 *.ckpt
 
 # === Custom Project Files ===
-sample_image.png
+sample_image.pnginput/
