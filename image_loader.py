@@ -50,10 +50,13 @@ dataset = load_dataset("zh-plus/tiny-imagenet", split="train").shuffle(seed=42)
 with open("input/labels.txt", "w") as label_file:
     for i, example in enumerate(dataset):
         img = transform(example["image"].convert("RGB")).unsqueeze(0)  # shape: [1, 3, 224, 224]
-        with torch.no_grad():
-            patch_embed = model.vit.embeddings.patch_embeddings(img)  # [1, 196, 192]
-            patch_embed = patch_embed[:, 0, :]  # CLS token is added later, use first token embedding
-            vec = patch_embed.squeeze(0).numpy().astype(np.float32)  # [192]
-        print(f"[INFO] image_{i}.bin shape: {vec.shape}")
-        vec.tofile(f"input/image_{i}.bin")
+        # with torch.no_grad():
+        #     patch_embed = model.vit.embeddings.patch_embeddings(img)  # [1, 196, 192]
+        #     patch_embed = patch_embed[:, 0, :]  # CLS token is added later, use first token embedding
+        #     vec = patch_embed.squeeze(0).numpy().astype(np.float32)  # [192]
+
+        # print(f"[INFO] image_{i}.bin shape: {vec.shape}")
+        # vec.tofile(f"input/image_{i}.bin")
         label_file.write(f"{example['label']}\n")
+        img_np = img.squeeze(0).numpy().astype(np.float32)  # [3, 224, 224]
+        img_np.tofile(f"input/image_{i}.bin")

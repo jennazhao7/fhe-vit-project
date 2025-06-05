@@ -26,9 +26,12 @@ inline std::vector<double> Softmax(const std::vector<double>& logits) {
 
 inline std::vector<double> GELU(const std::vector<double>& x) {
     std::vector<double> result(x.size());
+    const double sqrt_2_over_pi = std::sqrt(2.0 / M_PI);
+
     for (size_t i = 0; i < x.size(); ++i) {
-        double val = x[i];
-        result[i] = 0.5 * val * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (val + 0.044715 * std::pow(val, 3))));
+        double val = std::clamp(x[i], -30.0, 30.0);  // ← clamp extreme values
+        double x3 = val * val * val;
+        result[i] = 0.5 * val * (1.0 + std::tanh(sqrt_2_over_pi * (val + 0.044715 * x3)));
     }
     return result;
 }
@@ -60,7 +63,7 @@ inline std::vector<double> LayerNormVector(
     const std::vector<double>& x,
     const std::vector<double>& gamma,
     const std::vector<double>& beta,
-    double epsilon = 1e-6
+    double epsilon = 1e-2
 ) {
     size_t dim = x.size();
     double mean = 0.0, var = 0.0;
@@ -81,7 +84,7 @@ inline std::vector<std::vector<double>> LayerNorm(
     const std::vector<std::vector<double>>& X,
     const std::vector<double>& gamma,
     const std::vector<double>& beta,
-    double epsilon = 1e-6
+    double epsilon = 1e-2
 ) {
     std::vector<std::vector<double>> output;
     for (const auto& row : X) {

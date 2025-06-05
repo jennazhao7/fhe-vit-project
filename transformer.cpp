@@ -121,7 +121,7 @@ std::vector<std::vector<double>> TransformerBlock(
                 dot += Q[i][d] * K[j][d];
             attn_scores[i][j] = dot / std::sqrt((double)dim);
         }
-        Softmax(attn_scores[i]);
+        attn_scores[i] = Softmax(attn_scores[i]);
     }
 
     // --- Attention output ---
@@ -132,26 +132,40 @@ std::vector<std::vector<double>> TransformerBlock(
                 attn_out[i][d] += attn_scores[i][j] * V[j][d];
 
     auto attn_proj = MatMul(attn_out, attn_out_proj_weight);
+    // std::cout << "attn_out_proj_weight shape: [" << attn_out_proj_weight.size()
+    //       << " x " << attn_out_proj_weight[0].size() << "]\n";
     AddBias(attn_proj, attn_out_proj_bias);
     
     
     // Residual connection
-    std::cout << "x.size(): " << x.size() << ", x[0].size(): " << x[0].size() << "\n";
-    std::cout << "attn_proj.size(): " << attn_proj.size() << ", attn_proj[0].size(): " << attn_proj[0].size() << "\n";
+    //std::cout << "x.size(): " << x.size() << ", x[0].size(): " << x[0].size() << "\n";
+    //std::cout << "attn_proj.size(): " << attn_proj.size() << ", attn_proj[0].size(): " << attn_proj[0].size() << "\n";
     auto x_res1 = Add(x, attn_proj);
 
     // --- LayerNorm 2 ---
     auto x_norm2 = LayerNorm(x_res1, ln2_weight, ln2_bias);
 
     // --- MLP ---
-    auto mlp_fc1_weight_T = Transpose(mlp_fc1_weight);  // [192 x 768]
+    auto mlp_fc1_weight_T = Transpose(mlp_fc1_weight);  // [768 x 192]
     auto mlp_hidden = MatMul(x_norm2, mlp_fc1_weight_T);  // [197 x 192] * [192 x 768] = [197 x 768]
     AddBias(mlp_hidden, mlp_fc1_bias);
     GELU_matrix(mlp_hidden);
-
-    auto mlp_fc2_weight_T = Transpose(mlp_fc2_weight);  // [768 x 192]
+    // std::cout << "mlp_fc1_weight shape: [" << mlp_fc1_weight.size()
+    //       << " x " << mlp_fc1_weight[0].size() << "]\n";
+    auto mlp_fc2_weight_T = Transpose(mlp_fc2_weight); 
     auto mlp_out = MatMul(mlp_hidden, mlp_fc2_weight_T);  // [197 x 768] * [768 x 192] = [197 x 192]
+    // std::cout << "mlp_fc2_weight shape: [" << mlp_fc2_weight.size()
+    //       << " x " << mlp_fc2_weight[0].size() << "]\n";
+    //std::cout << "mlp_out shape: [" << mlp_out.size();
     AddBias(mlp_out, mlp_fc2_bias);
+    // auto mlp_fc1_weight_T = Transpose(mlp_fc1_weight);  // [192 x 768]
+    // auto mlp_hidden = MatMul(x_norm2, mlp_fc1_weight_T);  // [197 x 192] * [192 x 768] = [197 x 768]
+    // AddBias(mlp_hidden, mlp_fc1_bias);
+    // GELU_matrix(mlp_hidden);
+
+    // auto mlp_fc2_weight_T = Transpose(mlp_fc2_weight);  // [768 x 192]
+    // auto mlp_out = MatMul(mlp_hidden, mlp_fc2_weight_T);  // [197 x 768] * [768 x 192] = [197 x 192]
+    // AddBias(mlp_out, mlp_fc2_bias);
 
     // Residual connection
     return Add(x_res1, mlp_out);
