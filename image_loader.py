@@ -45,7 +45,7 @@ transform = Compose([
 ])
 
 dataset = load_dataset("zh-plus/tiny-imagenet", split="train").shuffle(seed=42)
-# dataset = dataset.select(range(200))  # pick N=20 samples for now
+dataset = dataset.select(range(500))  # pick N=20 samples for now
 
 with open("input/labels.txt", "w") as label_file:
     for i, example in enumerate(dataset):
